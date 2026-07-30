@@ -1,0 +1,162 @@
+/* ============================================================
+   editorial 风格主题（Anthropic / Claude 风的提炼）
+   ------------------------------------------------------------
+   五条核心原则，改样式时别破坏：
+   1. 暖米色基调，去掉数字屏幕的冷硬感
+   2. 衬线粗体唱主角，字重 900，字距收紧
+   3. 橙色是唯一彩色强调，需要克制时减少用量而不是换色
+   4. 大量留白，一屏一观点
+   5. 无阴影、无渐变、无立体效果
+
+   中文注意：衬线宋体笔画粗，大字号时 line-height 必须 ≥ 1.4，
+   英文衬线 1.05 好看，中文会笔画压迫。
+   ============================================================ */
+
+:root {
+  /* 底色 */
+  --cream:      #EFEAE0;  /* 暖米，页面底 */
+  --cream-deep: #E5DFD2;  /* 深暖米，卡片和色块 */
+  --ink:        #1A1A1A;  /* 主黑，不用纯 #000 */
+
+  /* 文字 */
+  --text:       #1A1A1A;
+  --text-sec:   #5C5852;  /* 次级灰 */
+  --text-on-dark: #F5F0E5;
+
+  /* 唯一彩色强调 */
+  --orange:     #CD6F47;
+
+  --line:       #D6CFC0;  /* 分隔线，暖调 */
+  --line-soft:  #E0D9CA;
+
+  --serif: Georgia, 'Source Han Serif SC', 'Source Han Serif CN',
+           'Noto Serif CJK SC', 'STSong', 'SimSun', serif;
+  --mono:  'Consolas', 'Monaco', 'Courier New', monospace;
+
+  --radius:    14px;
+  --radius-lg: 20px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  font-family:var(--serif);
+  background:var(--cream);
+  color:var(--text);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* 内容区：留白给得大方 */
+.wrap {
+  max-width:720px;
+  margin:0 auto;
+  padding:calc(env(safe-area-inset-top) + 56px) 28px calc(env(safe-area-inset-bottom) + 64px);
+}
+
+/* === overline：等宽、全大写、字距拉开的小标签 === */
+.overline {
+  font-family:var(--mono);
+  font-size:12px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  color:var(--text);
+}
+.overline.sec { color:var(--text-sec); }
+
+/* === 标题：衬线 900，字距收紧，中文行高放宽 === */
+.title-display {
+  font-family:var(--serif);
+  font-weight:900;
+  font-size:46px;
+  line-height:1.4;
+  letter-spacing:-1.5px;
+  color:var(--text);
+}
+.title-medium {
+  font-family:var(--serif);
+  font-weight:900;
+  font-size:30px;
+  line-height:1.4;
+  letter-spacing:-1px;
+  color:var(--text);
+}
+.title-display .orange,
+.title-medium  .orange { color:var(--orange); }
+
+.body-large {
+  font-family:var(--serif);
+  font-size:16px;
+  line-height:1.6;
+  color:var(--text-sec);
+}
+
+/* === icon-tile：橙色圆角方块 + 白色几何符号 ===
+   每个页面最多一个，用在标题区。符号查 icons 白名单，
+   抽象优于具象、几何优于拟物、静默优于喧闹。 */
+.icon-tile {
+  width:52px; height:52px;
+  border-radius:var(--radius);
+  background:var(--orange);
+  color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font-size:25px; line-height:1;
+  flex-shrink:0;
+}
+
+/* === card-mini-icon：无背景的黑色符号，不跟着换色 === */
+.card-mini-icon {
+  font-family:var(--mono);
+  font-size:24px; line-height:1;
+  color:var(--ink);
+}
+
+/* === 返回按钮 === */
+.back {
+  display:flex; align-items:center; justify-content:center;
+  width:38px; height:38px; flex-shrink:0;
+  background:var(--cream-deep);
+  border:none; border-radius:var(--radius);
+  color:var(--text-sec);
+  font-family:var(--mono); font-size:17px;
+  text-decoration:none;
+  transition:background .15s, color .15s;
+}
+.back:hover, .back:active { background:var(--orange); color:#fff; }
+
+/* === 按钮：实心橙，无阴影无渐变 === */
+.btn {
+  font-family:var(--serif);
+  font-weight:900; font-size:15px;
+  letter-spacing:.3px;
+  color:#fff;
+  background:var(--orange);
+  border:none; border-radius:var(--radius);
+  padding:13px 22px; cursor:pointer;
+  transition:opacity .15s;
+}
+.btn:hover { opacity:.88; }
+.btn:active { transform:translateY(1px); }
+
+/* === 输入框 === */
+.field {
+  font-family:var(--serif);
+  font-size:16px; color:var(--text);
+  background:var(--cream-deep);
+  border:1px solid transparent;
+  border-radius:var(--radius);
+  padding:13px 16px;
+  transition:border-color .15s;
+}
+.field:focus { outline:none; border-color:var(--orange); }
+.field::placeholder { color:var(--text-sec); opacity:.65; }
+
+/* 分隔线 */
+.rule { height:1px; background:var(--line); border:none; }
+
+/* 焦点环：整套设计里唯一的冷色，为了可访问性 */
+*:focus-visible { outline:2px solid #3898ec; outline-offset:2px; }
+
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--line); border-radius:3px; }
