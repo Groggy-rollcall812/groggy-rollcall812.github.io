@@ -8,14 +8,30 @@
 
 ```
 index.html          工作台首页，读 tools.js 渲染卡片
+theme.css           editorial 风格主题，所有页面共用
 tools.js            工具清单 —— 加新工具只改这个文件
 manifest.json       PWA 配置，让「添加到主屏幕」后没有地址栏
 sw.js               Service Worker，断网也能打开
+deploy.sh           一键部署
 make_icons.py       生成图标，改配色后重新跑
 icons/              图标（由脚本生成）
 tools/
   notes/            随手记
 ```
+
+## 设计风格
+
+editorial 风（Anthropic / Claude 风的提炼），五条原则写在 `theme.css` 顶部：
+
+- 暖米色基调 `#EFEAE0`，去掉数字屏幕的冷硬感
+- 衬线粗体唱主角，字重 900，字距收紧
+- 橙色 `#CD6F47` 是唯一彩色强调，要克制时减少用量而不是换色
+- 大量留白，一屏一观点
+- 无阴影、无渐变、无立体效果
+
+图标用抽象几何符号，不用 emoji。候选表在 `tools.js` 顶部注释里。
+
+中文注意：衬线宋体笔画粗，大字号 `line-height` 要 ≥ 1.4，英文衬线 1.05 好看但中文会笔画压迫。
 
 ## 加一个新工具
 
@@ -32,15 +48,13 @@ tools/
 }
 ```
 
-3. 提交：
+3. 部署：
 
 ```bash
-git add -A
-git commit -m "add 新工具"
-git push
+./deploy.sh "加了新工具"
 ```
 
-一分钟内线上生效。
+一两分钟内线上生效。凭证存在 macOS 钥匙串，不用输密码。
 
 ## 本地预览
 
