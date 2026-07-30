@@ -3,88 +3,106 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>随手记</title>
+<title>我的工作台</title>
+
+<!-- PWA：加到主屏后按独立应用打开 -->
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#EFEAE0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="apple-touch-icon" href="../../icons/icon-180.png">
+<meta name="apple-mobile-web-app-title" content="工作台">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
 
-<link rel="stylesheet" href="../../theme.css">
+<link rel="stylesheet" href="theme.css">
 <style>
-  header { margin-bottom:38px; }
-  .head-top { display:flex; align-items:center; gap:14px; margin-bottom:24px; }
-  .head-top .overline { color:var(--text-sec); }
-
-  .composer { display:flex; gap:10px; }
-  .composer .field { flex:1; }
-  .composer .btn { padding:0 22px; white-space:nowrap; }
-
-  .hint {
-    margin:12px 0 34px;
+  /* === 页头：overline + 大标题，关键词换橙色 === */
+  header { margin-bottom:52px; }
+  .head-top {
+    display:flex; align-items:center; gap:18px;
+    margin-bottom:30px;
+  }
+  .head-meta { display:flex; flex-direction:column; gap:7px; }
+  .head-date {
     font-family:var(--mono);
-    font-size:11px; letter-spacing:.8px;
+    font-size:12px; letter-spacing:1.5px;
+    color:var(--text-sec);
+  }
+  header .title-display { max-width:14em; }
+
+  /* === 工具区 === */
+  .section-head {
+    display:flex; align-items:baseline; justify-content:space-between;
+    margin-bottom:22px;
+  }
+  .section-count {
+    font-family:var(--mono);
+    font-size:12px; letter-spacing:1.5px;
     color:var(--text-sec);
   }
 
-  /* 列表：靠分隔线区隔，不用卡片，保持编辑感 */
-  ul { list-style:none; }
-  li {
-    display:flex; align-items:flex-start; gap:16px;
-    padding:18px 2px;
-    border-bottom:1px solid var(--line-soft);
+  .grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));
+    gap:18px;
   }
-  li:first-child { border-top:1px solid var(--line-soft); }
-  li.done .text { color:var(--text-sec); text-decoration:line-through; }
 
-  .check {
-    flex-shrink:0; width:22px; height:22px; margin-top:2px;
+  /* 卡片：深暖米底、无边框无阴影，靠底色差出层次 */
+  .card {
+    position:relative; display:block;
+    text-decoration:none; color:inherit;
     background:var(--cream-deep);
-    border-radius:6px; cursor:pointer;
-    display:flex; align-items:center; justify-content:center;
-    font-family:var(--mono); font-size:13px; color:transparent;
-    transition:background .15s;
+    border-radius:var(--radius-lg);
+    padding:32px 28px 30px;
+    transition:background .18s;
   }
-  .check:hover { background:#DCD5C5; }
-  li.done .check { background:var(--orange); color:#fff; }
+  .card:hover  { background:#DCD5C5; }
+  .card:active { background:#D4CBB8; }
 
-  .text {
-    flex:1; font-size:17px; line-height:1.55;
-    word-break:break-word;
+  .card .card-mini-icon { margin-bottom:26px; }
+  .card .name {
+    font-family:var(--serif);
+    font-weight:900; font-size:22px;
+    line-height:1.4; letter-spacing:-.6px;
   }
-
-  .del {
-    flex-shrink:0; background:none; border:none; cursor:pointer;
-    font-family:var(--mono); font-size:16px;
-    color:var(--text-sec); opacity:.5;
-    padding:0 2px; line-height:1.5;
-    transition:opacity .15s, color .15s;
+  .card .desc {
+    margin-top:9px;
+    font-size:14px; line-height:1.6;
+    color:var(--text-sec);
   }
-  .del:hover { opacity:1; color:var(--orange); }
+  .card .tag {
+    position:absolute; top:30px; right:28px;
+    font-family:var(--mono);
+    font-size:10px; letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--orange);
+  }
 
   .empty {
     background:var(--cream-deep);
     border-radius:var(--radius-lg);
-    padding:56px 30px; text-align:center;
+    padding:60px 32px; text-align:center;
     color:var(--text-sec); font-size:15px; line-height:1.8;
   }
+  .empty code {
+    font-family:var(--mono); font-size:13px;
+    color:var(--orange);
+  }
 
-  .bar {
-    display:flex; justify-content:space-between; align-items:center;
-    margin-top:26px;
-    font-family:var(--mono); font-size:11px; letter-spacing:1.2px;
+  footer {
+    margin-top:56px; padding-top:22px;
+    border-top:1px solid var(--line-soft);
+    font-family:var(--mono);
+    font-size:11px; letter-spacing:1.2px;
     color:var(--text-sec);
   }
-  .bar button {
-    background:none; border:none; cursor:pointer;
-    font-family:var(--mono); font-size:11px; letter-spacing:1.2px;
-    color:var(--text-sec);
-    transition:color .15s;
-  }
-  .bar button:hover { color:var(--orange); }
 
   @media (max-width:480px) {
     .wrap { padding-left:22px; padding-right:22px; }
-    .title-display { font-size:34px; }
+    header { margin-bottom:40px; }
+    header .title-display { font-size:36px; letter-spacing:-1px; }
+    .grid { grid-template-columns:1fr; gap:14px; }
+    .card { padding:26px 24px; }
   }
 </style>
 </head>
@@ -93,96 +111,77 @@
 
   <header>
     <div class="head-top">
-      <a class="back" href="../../" aria-label="返回工作台">←</a>
-      <div class="overline">Notes</div>
+      <div class="icon-tile">⊞</div>
+      <div class="head-meta">
+        <div class="overline">Workbench</div>
+        <div class="head-date" id="date"></div>
+      </div>
     </div>
-    <h1 class="title-display">随手<span class="orange">记</span></h1>
+    <h1 class="title-display" id="greet"></h1>
   </header>
 
-  <form class="composer" id="form">
-    <input type="text" class="field" id="input" placeholder="想到什么，记一笔" autocomplete="off">
-    <button class="btn" type="submit">记下</button>
-  </form>
-  <div class="hint">只存在这台设备的浏览器里，不会上传</div>
+  <main>
+    <div class="section-head">
+      <div class="overline sec">Tools</div>
+      <div class="section-count" id="count"></div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </main>
 
-  <ul id="list"></ul>
-  <div class="empty" id="empty">还没有内容<br>在上面记第一笔</div>
-
-  <div class="bar">
-    <span id="count"></span>
-    <button id="clear" type="button">清除已完成</button>
-  </div>
+  <footer>数据只存在这台设备</footer>
 
 </div>
 
+<script src="tools.js"></script>
 <script>
-  const KEY = 'workbench.notes.v1';
-  const listEl  = document.getElementById('list');
-  const emptyEl = document.getElementById('empty');
-  const countEl = document.getElementById('count');
-  const input   = document.getElementById('input');
+  const now = new Date();
 
-  // localStorage 可能被隐私模式禁用或存了坏数据，读的时候兜一下
-  function load() {
-    try {
-      const raw = JSON.parse(localStorage.getItem(KEY) || '[]');
-      return Array.isArray(raw) ? raw : [];
-    } catch { return []; }
-  }
-  function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(items)); }
-    catch { alert('保存失败，可能是浏览器隐私模式或存储已满'); }
-  }
+  // 大标题：问候语 + 一句话，关键词换橙色（整页只此一处彩色文字）
+  const h = now.getHours();
+  const greet =
+    h < 6  ? '夜深了' :
+    h < 11 ? '早上好' :
+    h < 14 ? '中午好' :
+    h < 18 ? '下午好' : '晚上好';
+  document.getElementById('greet').innerHTML =
+    `${greet}，<br>今天想做点<span class="orange">什么</span>`;
 
-  let items = load();
+  const week = ['周日','周一','周二','周三','周四','周五','周六'][now.getDay()];
+  const pad = n => String(n).padStart(2, '0');
+  document.getElementById('date').textContent =
+    `${now.getFullYear()}.${pad(now.getMonth() + 1)}.${pad(now.getDate())} ${week}`;
 
-  function render() {
-    listEl.innerHTML = '';
-    emptyEl.style.display = items.length ? 'none' : 'block';
+  // 按 tools.js 的清单渲染卡片
+  const grid = document.getElementById('grid');
+  const list = window.TOOLS || [];
 
-    items.forEach((it, i) => {
-      const li = document.createElement('li');
-      if (it.done) li.className = 'done';
+  document.getElementById('count').textContent =
+    list.length ? String(list.length).padStart(2, '0') : '';
 
-      const check = document.createElement('div');
-      check.className = 'check';
-      check.textContent = '✓';
-      check.onclick = () => { items[i].done = !items[i].done; save(); render(); };
-
-      const text = document.createElement('div');
-      text.className = 'text';
-      text.textContent = it.text;   // 不用 innerHTML，避免输入内容被当标签解析
-
-      const del = document.createElement('button');
-      del.className = 'del';
-      del.type = 'button';
-      del.textContent = '×';
-      del.onclick = () => { items.splice(i, 1); save(); render(); };
-
-      li.append(check, text, del);
-      listEl.appendChild(li);
+  if (!list.length) {
+    grid.outerHTML =
+      '<div class="empty">还没有工具<br>在 <code>tools.js</code> 里加一条就会出现在这里</div>';
+  } else {
+    list.forEach(t => {
+      const a = document.createElement('a');
+      a.className = 'card';
+      a.href = t.path;
+      a.innerHTML = `
+        ${t.tag ? `<span class="tag">${t.tag}</span>` : ''}
+        <div class="card-mini-icon">${t.icon || '◇'}</div>
+        <div class="name"></div>
+        <div class="desc"></div>`;
+      // 用 textContent 赋值，避免清单里的文字被当 HTML 解析
+      a.querySelector('.name').textContent = t.name;
+      a.querySelector('.desc').textContent = t.desc || '';
+      grid.appendChild(a);
     });
-
-    const left = items.filter(i => !i.done).length;
-    const pad = n => String(n).padStart(2, '0');
-    countEl.textContent = items.length ? `${pad(left)} 待办 / ${pad(items.length)} 共计` : '';
   }
 
-  document.getElementById('form').onsubmit = e => {
-    e.preventDefault();
-    const v = input.value.trim();
-    if (!v) return;
-    items.unshift({ text: v, done: false, at: Date.now() });
-    input.value = '';
-    save(); render();
-  };
-
-  document.getElementById('clear').onclick = () => {
-    items = items.filter(i => !i.done);
-    save(); render();
-  };
-
-  render();
+  // 注册离线缓存，失败也不影响正常使用
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
 </script>
 </body>
 </html>
