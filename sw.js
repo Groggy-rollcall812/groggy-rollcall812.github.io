@@ -4,7 +4,7 @@
    这样既不会看到过期页面，断网时也还能用。
    改了文件后如果手机上还是旧的，把下面版本号 +1 再 push。
 */
-const VERSION = 'v2';
+const VERSION = 'v4';
 const CACHE = 'workbench-' + VERSION;
 
 const PRECACHE = [

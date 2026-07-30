@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>美食地图</title>
+<meta name="theme-color" content="#EFEAE0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="../../icons/icon-180.png">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="../../theme.css">
+<style>
+  header { margin-bottom:32px; }
+  .head-top { display:flex; align-items:center; gap:14px; margin-bottom:24px; }
+  .head-top .overline { color:var(--text-sec); }
+
+  .section-label {
+    font-family:var(--mono);
+    font-size:11px; letter-spacing:2px; text-transform:uppercase;
+    color:var(--text-sec);
+    margin-bottom:14px;
+  }
+  .label-row {
+    display:flex; align-items:baseline; justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .label-row .section-label { margin-bottom:0; }
+
+  /* === 地图 === */
+  #map {
+    height:420px;
+    border-radius:var(--radius-lg);
+    background:var(--cream-deep);
+    z-index:0;             /* 压住 Leaflet 默认层级，避免盖住页面其他元素 */
+  }
+  .map-tip {
+    margin-top:10px;
+    font-family:var(--mono); font-size:11px; letter-spacing:.5px;
+    color:var(--text-sec);
+  }
+
+  /* Leaflet 弹窗跟着主题走 */
+  .leaflet-popup-content-wrapper {
+    background:var(--cream); color:var(--text);
+    border-radius:var(--radius); box-shadow:none;
+    border:1px solid var(--line);
+  }
+  .leaflet-popup-tip { background:var(--cream); border:1px solid var(--line); }
+  .leaflet-popup-content { margin:14px 16px; font-family:var(--serif); max-width:230px; }
+  .leaflet-container { font-family:var(--serif); }
+
+  .pop-place {
+    font-weight:900; font-size:16px; line-height:1.4;
+    letter-spacing:-.3px; margin-bottom:4px;
+  }
+  .pop-times {
+    font-family:var(--mono); font-size:10px; letter-spacing:1px;
+    color:var(--orange); margin-bottom:10px;
+  }
+  .pop-visit { padding:8px 0; border-top:1px solid var(--line-soft); }
+  .pop-visit:first-of-type { border-top:none; padding-top:2px; }
+  .pop-date {
+    font-family:var(--mono); font-size:10px; letter-spacing:1px;
+    color:var(--text-sec);
+  }
+  .pop-what { font-size:13.5px; line-height:1.55; margin-top:3px; }
+  .pop-who { font-size:12.5px; color:var(--text-sec); margin-top:2px; }
+
+  /* 标记：橙色圆点；去过多次的显示次数 */
+  .pin {
+    width:16px; height:16px;
+    background:var(--orange);
+    border:2.5px solid var(--cream);
+    border-radius:50%;
+    transition:transform .12s;
+  }
+  .pin.multi {
+    width:24px; height:24px;
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-family:var(--mono); font-size:11px; font-weight:700;
+  }
+  .pin-wrap:hover .pin { transform:scale(1.35); }
+  .pin.ghost { opacity:.45; }
+
+  /* === 表单 === */
+  form { margin-top:44px; }
+  .row { display:flex; gap:10px; margin-bottom:10px; }
+  .col { flex:1; min-width:0; }
+  .field-label {
+    display:block;
+    font-family:var(--mono); font-size:10px; letter-spacing:1.2px;
+    text-transform:uppercase; color:var(--text-sec);
+    margin-bottom:6px;
+  }
+  input.field, textarea.field { width:100%; display:block; }
+  textarea.field { resize:vertical; min-height:64px; line-height:1.6; }
+
+  .search-row { display:flex; gap:8px; }
+  .search-row .field { flex:1; min-width:0; }
+  .coord {
+    margin-top:8px;
+    font-family:var(--mono); font-size:11px; letter-spacing:.5px;
+    color:var(--text-sec);
+  }
+  .coord.set { color:var(--orange); }
+
+  .submit-row { margin-top:20px; display:flex; gap:10px; align-items:center; }
+
+  /* 编辑状态下给表单一个视觉提示 */
+  .editing-flag {
+    display:none;
+    margin-bottom:14px; padding:12px 16px;
+    background:var(--cream-deep); border-radius:var(--radius);
+    font-size:13.5px; line-height:1.5;
+  }
+  .editing-flag.on { display:block; }
+  .editing-flag b { font-weight:900; }
+
+  /* === 记录列表 === */
+  .records { margin-top:52px; }
+  ul { list-style:none; }
+  li {
+    padding:18px 2px;
+    border-bottom:1px solid var(--line-soft);
+    display:flex; gap:14px; align-items:flex-start;
+  }
+  li:first-child { border-top:1px solid var(--line-soft); }
+  li.on-edit { background:var(--cream-deep); border-radius:var(--radius); padding:18px 14px; }
+  .rec-body { flex:1; min-width:0; }
+  .rec-date {
+    font-family:var(--mono); font-size:11px; letter-spacing:1px;
+    color:var(--text-sec); margin-bottom:5px;
+  }
+  .rec-place {
+    font-weight:900; font-size:18px; line-height:1.4;
+    letter-spacing:-.4px; cursor:pointer;
+  }
+  .rec-place:hover { color:var(--orange); }
+  .rec-meta { margin-top:6px; font-size:14px; line-height:1.6; color:var(--text-sec); }
+  .rec-nogeo {
+    display:inline-block; margin-top:6px;
+    font-family:var(--mono); font-size:10px; letter-spacing:1px;
+    color:var(--orange);
+  }
+  .rec-acts { display:flex; gap:4px; flex-shrink:0; }
+  .icon-btn {
+    background:none; border:none; cursor:pointer;
+    font-family:var(--mono); font-size:14px;
+    color:var(--text-sec); opacity:.55; padding:2px 4px;
+    transition:opacity .15s, color .15s;
+  }
+  .icon-btn:hover { opacity:1; color:var(--orange); }
+
+  .empty {
+    background:var(--cream-deep);
+    border-radius:var(--radius-lg);
+    padding:52px 30px; text-align:center;
+    color:var(--text-sec); font-size:15px; line-height:1.8;
+  }
+
+  .stats {
+    display:flex; gap:26px; flex-wrap:wrap; margin-top:22px;
+    font-family:var(--mono); font-size:11px; letter-spacing:1.2px;
+    color:var(--text-sec);
+  }
+
+  /* === 备份 === */
+  .backup { margin-top:48px; padding-top:22px; border-top:1px solid var(--line-soft); }
+  .backup-head { display:flex; align-items:baseline; gap:10px; margin-bottom:12px; }
+  .backup-row { display:flex; gap:10px; flex-wrap:wrap; }
+  .backup-note { margin-top:12px; font-size:13px; line-height:1.65; color:var(--text-sec); }
+
+  .btn-ghost {
+    font-family:var(--serif); font-weight:900; font-size:14px;
+    color:var(--text); background:transparent;
+    border:1.5px solid var(--line); border-radius:var(--radius);
+    padding:10px 18px; cursor:pointer;
+    transition:border-color .15s, color .15s;
+  }
+  .btn-ghost:hover { border-color:var(--orange); color:var(--orange); }
+  .btn-ghost:disabled { opacity:.5; cursor:default; }
+  .btn-ghost.sm { font-size:12px; padding:7px 13px; }
+
+  @media (max-width:480px) {
+    .wrap { padding-left:22px; padding-right:22px; }
+    .title-display { font-size:34px; }
+    #map { height:320px; }
+    .row { flex-direction:column; gap:10px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="head-top">
+      <a class="back" href="../../" aria-label="返回工作台">←</a>
+      <div class="overline">Food Map</div>
+    </div>
+    <h1 class="title-display">美食<span class="orange">地图</span></h1>
+  </header>
+
+  <div class="label-row">
+    <div class="section-label">Map</div>
+    <button class="btn-ghost sm" type="button" id="btn-fit">看全部</button>
+  </div>
+  <div id="map"></div>
+  <div class="map-tip">鼠标移到点上看详情 · 在地图上点一下可以选位置</div>
+
+  <form id="form">
+    <div class="section-label" style="margin-top:44px" id="form-label">New Record</div>
+
+    <div class="editing-flag" id="editing-flag">
+      正在修改 <b id="editing-name"></b>，改完点「保存修改」。
+    </div>
+
+    <div class="row">
+      <div class="col">
+        <label class="field-label" for="f-date">时间</label>
+        <input type="date" class="field" id="f-date" required>
+      </div>
+      <div class="col">
+        <label class="field-label" for="f-who">和谁一起</label>
+        <input type="text" class="field" id="f-who" placeholder="留空表示一个人" autocomplete="off">
+      </div>
+    </div>
+
+    <div style="margin-bottom:10px">
+      <label class="field-label" for="f-place">地点</label>
+      <div class="search-row">
+        <input type="text" class="field" id="f-place" placeholder="店名或地址" autocomplete="off" required>
+        <button class="btn-ghost" type="button" id="btn-search">搜位置</button>
+      </div>
+      <div class="coord" id="coord">未定位 · 在地图上点一下最准</div>
+    </div>
+
+    <div>
+      <label class="field-label" for="f-what">吃了什么</label>
+      <textarea class="field" id="f-what" placeholder="菜名、味道、当时的事…"></textarea>
+    </div>
+
+    <div class="submit-row">
+      <button class="btn" type="submit" id="btn-submit">记下这一顿</button>
+      <button class="btn-ghost" type="button" id="btn-cancel">清空</button>
+    </div>
+  </form>
+
+  <section class="records">
+    <div class="section-label">Records</div>
+    <ul id="list"></ul>
+    <div class="empty" id="empty">还没有记录<br>在上面记下第一顿</div>
+    <div class="stats" id="stats"></div>
+  </section>
+
+  <section class="backup">
+    <div class="backup-head">
+      <span class="card-mini-icon" style="font-size:17px">⇄</span>
+      <span class="overline sec">Backup</span>
+    </div>
+    <div class="backup-row">
+      <button class="btn-ghost" id="export" type="button">导出备份</button>
+      <button class="btn-ghost" id="import" type="button">导入备份</button>
+    </div>
+    <p class="backup-note">
+      清除浏览器数据、删掉这个应用、或者换手机，本地数据都会丢。
+      建议定期导出一份存到网盘或发给自己，换设备时导入即可恢复。
+    </p>
+  </section>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="../../storage.js"></script>
+<script>
+(function () {
+  const store = new Store('food');
+  const asList = v => Array.isArray(v) ? v : [];
+  let items = asList(store.load([]));
+
+  let picked = null;      // 待保存的坐标
+  let editId = null;      // 正在编辑的记录 id，null 表示新增
+
+  const $ = id => document.getElementById(id);
+  const coordEl = $('coord');
+  const listEl  = $('list');
+  const emptyEl = $('empty');
+
+  const esc = s => String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  /* ---------- 地图 ---------- */
+
+  const map = L.map('map', { attributionControl: false })
+               .setView([34.5, 108.9], 4);
+
+  // 高德瓦片：中文标注、国内速度好。加载失败自动切 OSM。
+  const gaode = L.tileLayer(
+    'https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}',
+    { subdomains: '1234', maxZoom: 18 }
+  );
+  const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    { maxZoom: 19, attribution: '© OpenStreetMap' });
+
+  gaode.addTo(map);
+  let switched = false;
+  gaode.on('tileerror', () => {
+    if (switched) return;
+    switched = true;
+    map.removeLayer(gaode);
+    osm.addTo(map);
+  });
+
+  function makeIcon(count, ghost) {
+    const multi = count > 1;
+    return L.divIcon({
+      className: 'pin-wrap',
+      html: `<div class="pin${multi ? ' multi' : ''}${ghost ? ' ghost' : ''}">${multi ? count : ''}</div>`,
+      iconSize: multi ? [24, 24] : [16, 16],
+      iconAnchor: multi ? [12, 12] : [8, 8]
+    });
+  }
+
+  let markers = [];
+  let pickMarker = null;
+
+  function setPicked(lat, lng, note) {
+    picked = { lat: +lat, lng: +lng };
+    coordEl.textContent = `已定位 ${picked.lat.toFixed(5)}, ${picked.lng.toFixed(5)}`
+                        + (note ? ` · ${note}` : '');
+    coordEl.classList.add('set');
+
+    if (pickMarker) map.removeLayer(pickMarker);
+    pickMarker = L.marker([picked.lat, picked.lng], { icon: makeIcon(1, true) }).addTo(map);
+  }
+
+  function clearPicked() {
+    picked = null;
+    coordEl.textContent = '未定位 · 在地图上点一下最准';
+    coordEl.classList.remove('set');
+    if (pickMarker) { map.removeLayer(pickMarker); pickMarker = null; }
+  }
+
+  map.on('click', e => setPicked(e.latlng.lat, e.latlng.lng, '手动选点'));
+
+  /**
+   * 把记录按地点聚合。
+   * 同一家店去过多次时合并成一个标记，弹窗里按时间倒序列出每次。
+   * 分组键用地点名 + 坐标粗粒度（约百米），避免同名不同店被并到一起。
+   */
+  function groupByPlace() {
+    const geo = items.filter(it => it.lat != null && it.lng != null);
+    const map_ = new Map();
+
+    geo.forEach(it => {
+      const key = it.place + '@' + it.lat.toFixed(3) + ',' + it.lng.toFixed(3);
+      if (!map_.has(key)) {
+        map_.set(key, { place: it.place, lat: it.lat, lng: it.lng, visits: [] });
+      }
+      map_.get(key).visits.push(it);
+    });
+
+    map_.forEach(g => g.visits.sort((a, b) => (b.date || '').localeCompare(a.date || '')));
+    return [...map_.values()];
+  }
+
+  function popupHtml(g) {
+    let h = `<div class="pop-place">${esc(g.place)}</div>`;
+    if (g.visits.length > 1) h += `<div class="pop-times">去过 ${g.visits.length} 次</div>`;
+
+    g.visits.forEach(v => {
+      h += '<div class="pop-visit">';
+      h += `<div class="pop-date">${esc((v.date || '').replace(/-/g, '.'))}</div>`;
+      if (v.what) h += `<div class="pop-what">${esc(v.what)}</div>`;
+      h += `<div class="pop-who">${v.who ? '与 ' + esc(v.who) : '一个人'}</div>`;
+      h += '</div>';
+    });
+    return h;
+  }
+
+  function drawMarkers(fit) {
+    markers.forEach(m => map.removeLayer(m));
+    markers = [];
+
+    const groups = groupByPlace();
+
+    groups.forEach(g => {
+      const m = L.marker([g.lat, g.lng], {
+        icon: makeIcon(g.visits.length, false),
+        riseOnHover: true
+      }).addTo(map);
+
+      m.bindPopup(popupHtml(g), { closeButton: false, offset: [0, -4] });
+
+      // 悬浮即看，移开就收；点击则固定住（手机上没有 hover，点击是主要方式）
+      m.on('mouseover', () => m.openPopup());
+      m.on('mouseout', () => { if (!m._pinned) m.closePopup(); });
+      m.on('click', () => { m._pinned = true; m.openPopup(); });
+      m.on('popupclose', () => { m._pinned = false; });
+
+      m._placeKey = g.place;
+      markers.push(m);
+    });
+
+    if (fit) fitAll(groups);
+    return groups;
+  }
+
+  function fitAll(groups) {
+    const gs = groups || groupByPlace();
+    if (!gs.length) return;
+    if (gs.length === 1) {
+      map.setView([gs[0].lat, gs[0].lng], 15);
+    } else {
+      map.fitBounds(L.latLngBounds(gs.map(g => [g.lat, g.lng])), {
+        padding: [45, 45], maxZoom: 15
+      });
+    }
+  }
+
+  $('btn-fit').onclick = () => {
+    const gs = groupByPlace();
+    if (!gs.length) { alert('还没有已定位的记录'); return; }
+    fitAll(gs);
+  };
+
+  /* ---------- 地名搜索 ---------- */
+
+  // Nominatim 免费无需 key，但对中国地址理解差、常给出错误结果，
+  // 所以搜完必须让用户核对，地图点选才是主要方式。
+  $('btn-search').onclick = async () => {
+    const q = $('f-place').value.trim();
+    if (!q) { alert('先填地点名称'); return; }
+
+    const btn = $('btn-search');
+    btn.disabled = true;
+    btn.textContent = '搜索中';
+
+    try {
+      const url = 'https://nominatim.openstreetmap.org/search'
+                + '?format=json&limit=1&accept-language=zh-CN'
+                + '&q=' + encodeURIComponent(q);
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+
+      const hits = await res.json();
+      if (!hits.length) {
+        alert('没搜到。直接在地图上点一下选位置即可。');
+        return;
+      }
+
+      const hit = hits[0];
+      setPicked(hit.lat, hit.lon, '搜索结果，请核对');
+      map.setView([+hit.lat, +hit.lon], 15);
+
+      // 这个免费服务对中国地址经常张冠李戴，主动让用户确认
+      alert('搜到：' + (hit.display_name || '').split(',').slice(0, 3).join(',')
+          + '\n\n地图已定位到这里，请看一眼对不对。\n不对就直接在地图上点正确的位置。');
+    } catch (e) {
+      alert('搜索失败。直接在地图上点一下选位置即可。');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '搜位置';
+    }
+  };
+
+  /* ---------- 表单：新增 / 编辑共用 ---------- */
+
+  const todayStr = () => {
+    const d = new Date(), p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  };
+
+  function enterEdit(it) {
+    editId = it.id;
+    $('f-date').value  = it.date || todayStr();
+    $('f-place').value = it.place || '';
+    $('f-who').value   = it.who || '';
+    $('f-what').value  = it.what || '';
+
+    if (it.lat != null && it.lng != null) {
+      setPicked(it.lat, it.lng, '原位置');
+      map.setView([it.lat, it.lng], 15);
+    } else {
+      clearPicked();
+    }
+
+    $('form-label').textContent = 'Edit Record';
+    $('editing-name').textContent = it.place;
+    $('editing-flag').classList.add('on');
+    $('btn-submit').textContent = '保存修改';
+    $('btn-cancel').textContent = '取消';
+
+    render();
+    $('form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function exitEdit() {
+    editId = null;
+    $('f-date').value  = todayStr();
+    $('f-place').value = '';
+    $('f-who').value   = '';
+    $('f-what').value  = '';
+    clearPicked();
+
+    $('form-label').textContent = 'New Record';
+    $('editing-flag').classList.remove('on');
+    $('btn-submit').textContent = '记下这一顿';
+    $('btn-cancel').textContent = '清空';
+    render();
+  }
+
+  $('btn-cancel').onclick = exitEdit;
+
+  $('form').onsubmit = e => {
+    e.preventDefault();
+
+    const place = $('f-place').value.trim();
+    if (!place) { alert('地点不能为空'); return; }
+
+    if (!picked) {
+      const ok = confirm('还没有定位，这条不会出现在地图上。\n\n仍然保存？');
+      if (!ok) return;
+    }
+
+    const fields = {
+      date:  $('f-date').value,
+      place: place,
+      who:   $('f-who').value.trim(),
+      what:  $('f-what').value.trim(),
+      lat: picked ? picked.lat : null,
+      lng: picked ? picked.lng : null
+    };
+
+    if (editId) {
+      const idx = items.findIndex(x => x.id === editId);
+      if (idx === -1) { alert('这条记录已不存在'); exitEdit(); return; }
+      items[idx] = Object.assign({}, items[idx], fields);
+    } else {
+      items.push(Object.assign({
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+        at: Date.now()
+      }, fields));
+    }
+
+    if (!store.save(items)) return;
+
+    const wasEditing = !!editId;
+    exitEdit();
+    drawMarkers(!wasEditing);   // 新增时重新 fit，编辑时保持当前视野
+  };
+
+  /* ---------- 列表 ---------- */
+
+  function render() {
+    items.sort((a, b) =>
+      (b.date || '').localeCompare(a.date || '') || (b.at || 0) - (a.at || 0)
+    );
+
+    listEl.innerHTML = '';
+    emptyEl.style.display = items.length ? 'none' : 'block';
+
+    items.forEach(it => {
+      const li = document.createElement('li');
+      if (it.id === editId) li.className = 'on-edit';
+
+      const body = document.createElement('div');
+      body.className = 'rec-body';
+
+      const date = document.createElement('div');
+      date.className = 'rec-date';
+      date.textContent = (it.date || '').replace(/-/g, '.');
+
+      const place = document.createElement('div');
+      place.className = 'rec-place';
+      place.textContent = it.place;
+
+      body.append(date, place);
+
+      if (it.who || it.what) {
+        const meta = document.createElement('div');
+        meta.className = 'rec-meta';
+        const parts = [];
+        if (it.who) parts.push('与 ' + it.who);
+        if (it.what) parts.push(it.what);
+        meta.textContent = parts.join(' · ');
+        body.appendChild(meta);
+      }
+
+      if (it.lat != null && it.lng != null) {
+        place.onclick = () => {
+          map.setView([it.lat, it.lng], 16);
+          const m = markers.find(m => m._placeKey === it.place);
+          if (m) { m._pinned = true; m.openPopup(); }
+          $('map').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        };
+      } else {
+        const tag = document.createElement('div');
+        tag.className = 'rec-nogeo';
+        tag.textContent = '未定位 · 点笔改一下';
+        body.appendChild(tag);
+      }
+
+      const acts = document.createElement('div');
+      acts.className = 'rec-acts';
+
+      const edit = document.createElement('button');
+      edit.className = 'icon-btn';
+      edit.type = 'button';
+      edit.textContent = '✎';
+      edit.title = '编辑';
+      edit.onclick = () => enterEdit(it);
+
+      const del = document.createElement('button');
+      del.className = 'icon-btn';
+      del.type = 'button';
+      del.textContent = '×';
+      del.title = '删除';
+      del.onclick = () => {
+        if (!confirm(`删除「${it.place}」${it.date} 这条记录？`)) return;
+        items = items.filter(x => x.id !== it.id);
+        store.save(items);
+        if (editId === it.id) exitEdit();
+        else { render(); drawMarkers(false); }
+      };
+
+      acts.append(edit, del);
+      li.append(body, acts);
+      listEl.appendChild(li);
+    });
+
+    // 统计：几顿、几个地方、几位同行
+    const places = new Set(items.map(i => i.place));
+    const people = new Set();
+    items.forEach(i => (i.who || '').split(/[、,，\s]+/).forEach(p => p && people.add(p)));
+
+    $('stats').textContent = items.length
+      ? `${items.length} 顿 / ${places.size} 个地方 / ${people.size} 位同行`
+      : '';
+  }
+
+  /* ---------- 备份 ---------- */
+
+  $('export').onclick = () => store.exportFile();
+
+  $('import').onclick = () => {
+    store.importFile(data => {
+      const incoming = asList(data);
+      if (!incoming.length) { alert('备份里没有可导入的内容'); return; }
+
+      if (items.length) {
+        const merge = confirm(
+          `备份里有 ${incoming.length} 条，当前有 ${items.length} 条。\n\n` +
+          '确定 = 合并（按 id 去重）\n取消 = 用备份完全替换'
+        );
+        if (merge) {
+          const seen = new Set(items.map(i => i.id));
+          const add = incoming.filter(i => !seen.has(i.id));
+          items = items.concat(add);
+          alert(`已合并，新增 ${add.length} 条`);
+        } else {
+          items = incoming;
+          alert(`已替换为备份内容，共 ${incoming.length} 条`);
+        }
+      } else {
+        items = incoming;
+        alert(`已恢复 ${incoming.length} 条`);
+      }
+
+      store.save(items);
+      if (editId) exitEdit();
+      render();
+      drawMarkers(true);
+    });
+  };
+
+  /* ---------- 启动 ---------- */
+
+  $('f-date').value = todayStr();
+  render();
+  drawMarkers(true);
+})();
+</script>
+</body>
+</html>
