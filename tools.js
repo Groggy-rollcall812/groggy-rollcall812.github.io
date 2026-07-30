@@ -23,6 +23,13 @@ window.TOOLS = [
   //   tag: ''
   // },
   {
+    path: 'tools/shelf/',
+    name: '收藏夹',
+    desc: '看过的电影、剧、书，按日子摊在日历上',
+    icon: '▣',
+    tag: ''
+  },
+  {
     path: 'tools/notes/',
     name: '随手记',
     desc: '想到就记一笔，存在本机',
