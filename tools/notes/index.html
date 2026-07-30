@@ -74,13 +74,41 @@
     font-family:var(--mono); font-size:11px; letter-spacing:1.2px;
     color:var(--text-sec);
   }
-  .bar button {
+  .linkbtn {
     background:none; border:none; cursor:pointer;
     font-family:var(--mono); font-size:11px; letter-spacing:1.2px;
     color:var(--text-sec);
     transition:color .15s;
   }
-  .bar button:hover { color:var(--orange); }
+  .linkbtn:hover { color:var(--orange); }
+
+  /* 备份区：跟主体拉开距离，日常不干扰 */
+  .backup {
+    margin-top:48px; padding-top:22px;
+    border-top:1px solid var(--line-soft);
+  }
+  .backup-head {
+    display:flex; align-items:baseline; gap:10px;
+    margin-bottom:12px;
+  }
+  .backup-row { display:flex; gap:10px; flex-wrap:wrap; }
+  .backup-note {
+    margin-top:12px;
+    font-size:13px; line-height:1.65; color:var(--text-sec);
+  }
+
+  /* 次要按钮：描边而非实心，不跟主操作抢 */
+  .btn-ghost {
+    font-family:var(--serif);
+    font-weight:900; font-size:14px;
+    color:var(--text);
+    background:transparent;
+    border:1.5px solid var(--line);
+    border-radius:var(--radius);
+    padding:10px 18px; cursor:pointer;
+    transition:border-color .15s, color .15s;
+  }
+  .btn-ghost:hover { border-color:var(--orange); color:var(--orange); }
 
   @media (max-width:480px) {
     .wrap { padding-left:22px; padding-right:22px; }
@@ -110,31 +138,38 @@
 
   <div class="bar">
     <span id="count"></span>
-    <button id="clear" type="button">清除已完成</button>
+    <button class="linkbtn" id="clear" type="button">清除已完成</button>
   </div>
+
+  <section class="backup">
+    <div class="backup-head">
+      <span class="card-mini-icon" style="font-size:17px">⇄</span>
+      <span class="overline sec">Backup</span>
+    </div>
+    <div class="backup-row">
+      <button class="btn-ghost" id="export" type="button">导出备份</button>
+      <button class="btn-ghost" id="import" type="button">导入备份</button>
+    </div>
+    <p class="backup-note">
+      清除浏览器数据、删掉这个应用、或者换手机，本地数据都会丢。
+      建议定期导出一份存到网盘或发给自己，换设备时导入即可恢复。
+    </p>
+  </section>
 
 </div>
 
+<script src="../../storage.js"></script>
 <script>
-  const KEY = 'workbench.notes.v1';
+  const store   = new Store('notes');
   const listEl  = document.getElementById('list');
   const emptyEl = document.getElementById('empty');
   const countEl = document.getElementById('count');
   const input   = document.getElementById('input');
 
-  // localStorage 可能被隐私模式禁用或存了坏数据，读的时候兜一下
-  function load() {
-    try {
-      const raw = JSON.parse(localStorage.getItem(KEY) || '[]');
-      return Array.isArray(raw) ? raw : [];
-    } catch { return []; }
-  }
-  function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(items)); }
-    catch { alert('保存失败，可能是浏览器隐私模式或存储已满'); }
-  }
+  // 只接受数组，防止导入了结构不对的数据后页面崩掉
+  const asList = v => Array.isArray(v) ? v : [];
 
-  let items = load();
+  let items = asList(store.load([]));
 
   function render() {
     listEl.innerHTML = '';
@@ -147,7 +182,10 @@
       const check = document.createElement('div');
       check.className = 'check';
       check.textContent = '✓';
-      check.onclick = () => { items[i].done = !items[i].done; save(); render(); };
+      check.onclick = () => {
+        items[i].done = !items[i].done;
+        store.save(items); render();
+      };
 
       const text = document.createElement('div');
       text.className = 'text';
@@ -157,7 +195,10 @@
       del.className = 'del';
       del.type = 'button';
       del.textContent = '×';
-      del.onclick = () => { items.splice(i, 1); save(); render(); };
+      del.onclick = () => {
+        items.splice(i, 1);
+        store.save(items); render();
+      };
 
       li.append(check, text, del);
       listEl.appendChild(li);
@@ -165,7 +206,9 @@
 
     const left = items.filter(i => !i.done).length;
     const pad = n => String(n).padStart(2, '0');
-    countEl.textContent = items.length ? `${pad(left)} 待办 / ${pad(items.length)} 共计` : '';
+    countEl.textContent = items.length
+      ? `${pad(left)} 待办 / ${pad(items.length)} 共计`
+      : '';
   }
 
   document.getElementById('form').onsubmit = e => {
@@ -174,12 +217,48 @@
     if (!v) return;
     items.unshift({ text: v, done: false, at: Date.now() });
     input.value = '';
-    save(); render();
+    store.save(items); render();
   };
 
   document.getElementById('clear').onclick = () => {
     items = items.filter(i => !i.done);
-    save(); render();
+    store.save(items); render();
+  };
+
+  document.getElementById('export').onclick = () => store.exportFile();
+
+  document.getElementById('import').onclick = () => {
+    store.importFile(data => {
+      const incoming = asList(data);
+      if (!incoming.length) {
+        alert('备份里没有可导入的内容');
+        return;
+      }
+
+      // 已有数据时让用户选，避免误覆盖
+      let next;
+      if (items.length) {
+        const merge = confirm(
+          `备份里有 ${incoming.length} 条，当前有 ${items.length} 条。\n\n` +
+          '确定 = 合并（保留现有，去重后追加）\n取消 = 用备份完全替换'
+        );
+        if (merge) {
+          const seen = new Set(items.map(i => i.text + '|' + (i.at || '')));
+          const add = incoming.filter(i => !seen.has(i.text + '|' + (i.at || '')));
+          next = items.concat(add);
+          alert(`已合并，新增 ${add.length} 条`);
+        } else {
+          next = incoming;
+          alert(`已替换为备份内容，共 ${incoming.length} 条`);
+        }
+      } else {
+        next = incoming;
+        alert(`已恢复 ${incoming.length} 条`);
+      }
+
+      items = next;
+      store.save(items); render();
+    });
   };
 
   render();
